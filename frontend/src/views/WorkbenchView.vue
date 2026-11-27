@@ -71,7 +71,8 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="row in rows" :key="String(row.id)" :data-testid="`row-${row.id}`" :data-status="String(row.status)">
+        <template v-for="row in rows" :key="String(row.id)">
+        <tr :data-testid="`row-${row.id}`" :data-status="String(row.status)">
           <td v-for="column in meta.fields" :key="column">{{ row[column] ?? '—' }}</td>
           <td>{{ row.status }}</td>
           <td class="row-actions">
@@ -84,6 +85,15 @@
               @click="runAction(action, row)"
             >
               {{ action }}
+            </button>
+            <button
+              v-if="hasSupplements(row)"
+              class="link supplement-link"
+              type="button"
+              :data-testid="`supplements-${row.id}`"
+              @click="toggleSupplements(row)"
+              title="查看补测受理详情">
+              补测详情
             </button>
             <button
               v-if="row['批次号']"
@@ -102,6 +112,39 @@
             </button>
           </td>
         </tr>
+        <tr v-if="expandedSupplementId === row.id" class="supplement-row">
+          <td :colspan="meta.fields.length + 2">
+            <div class="supplement-panel">
+              <h5>核验单 {{ row['登记编号'] || row.id }} 补测受理情况（版本 V{{ row['核验单版本'] }}）</h5>
+              <table class="supplement-table">
+                <thead>
+                  <tr>
+                    <th>补测</th><th>来源</th><th>数值</th><th>签字人</th><th>设备编号</th>
+                    <th>翻堆时段</th><th>状态</th><th>受理结论</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="sup in supplementsOf(row)" :key="String(sup['补测ID'])"
+                      :class="{ accepted: sup['状态'] === '已受理', rejected: sup['状态'] === '不采用' }">
+                    <td>#{{ sup['补测ID'] }}</td>
+                    <td>{{ sup['来源'] }}</td>
+                    <td>{{ sup['补测数值'] }}%</td>
+                    <td>{{ sup['签字人'] || '—' }}</td>
+                    <td>{{ sup['设备编号'] || '—' }}</td>
+                    <td>{{ sup['翻堆时段'] || '—' }}</td>
+                    <td>{{ sup['状态'] }}</td>
+                    <td>{{ sup['受理结论'] || '—' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+              <p v-if="row.status === '已受理'" class="credential-line">
+                转干燥凭据：{{ row['受理来源'] }} {{ row['受理数值'] }}%（受理时间 {{ row['受理时间'] || '—' }}），一堆茶只交接一次。
+              </p>
+              <p v-else class="credential-line pending">尚未形成转干燥凭据，干燥台领料将放入等待中。</p>
+            </div>
+          </td>
+        </tr>
+        </template>
         <tr v-if="!rows.length">
           <td :colspan="meta.fields.length + 2" class="empty-state">
             暂无{{ meta.name }}数据，可先登记{{ meta.entity }}
@@ -115,7 +158,7 @@
         <h3>登记{{ meta.entity }}</h3>
         <label v-for="field in meta.fields" :key="field" class="create-field">
           <span>{{ field }}</span>
-          <input v-model="createValues[field]" :data-testid="`create-${field}`" required />
+          <input v-model="createValues[field]" :data-testid="`create-${field}`" :required="isRequired(field)" />
         </label>
         <div class="page-actions">
           <button class="btn" type="button" @click="showCreate = false">取消</button>
@@ -193,6 +236,26 @@ const statusSummary = computed(() =>
 
 function getProcessName(module: string): string {
   return PROCESS_NAMES[module] || module
+}
+
+function isRequired(field: string): boolean {
+  return meta.requiredFields ? meta.requiredFields.includes(field) : true
+}
+
+// 缺测核验单：补测受理详情展开
+const expandedSupplementId = ref<number | null>(null)
+
+function supplementsOf(row: EntryRow): Array<Record<string, any>> {
+  const list = row['补测列表']
+  return Array.isArray(list) ? list : []
+}
+
+function hasSupplements(row: EntryRow): boolean {
+  return supplementsOf(row).length > 0
+}
+
+function toggleSupplements(row: EntryRow) {
+  expandedSupplementId.value = expandedSupplementId.value === Number(row.id) ? null : Number(row.id)
 }
 
 function resetFilters() {
@@ -371,5 +434,52 @@ onMounted(reload)
 .trace-link:hover, .upstream-link:hover {
   background: #27ae60;
   color: white !important;
+}
+.supplement-link {
+  color: #8e44ad !important;
+  margin-left: 6px;
+  padding: 2px 6px;
+  font-size: 11px;
+  border: 1px solid #8e44ad;
+  border-radius: 3px;
+  cursor: pointer;
+}
+.supplement-link:hover {
+  background: #8e44ad;
+  color: white !important;
+}
+.supplement-row td {
+  background: #faf7fd;
+  padding: 8px 12px;
+}
+.supplement-panel h5 {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: #4a235a;
+}
+.supplement-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+.supplement-table th, .supplement-table td {
+  border: 1px solid #e2d9ec;
+  padding: 3px 6px;
+  text-align: left;
+}
+.supplement-table tr.accepted td {
+  background: #d4edda;
+}
+.supplement-table tr.rejected td {
+  color: #7f8c8d;
+  background: #f4f4f4;
+}
+.credential-line {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: #155724;
+}
+.credential-line.pending {
+  color: #856404;
 }
 </style>

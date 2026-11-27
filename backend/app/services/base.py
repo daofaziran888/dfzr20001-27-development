@@ -74,7 +74,9 @@ class BaseModuleService:
                         "shipment_id", "shipment_no", "upstream_module", "upstream_id",
                         "fermentation_warning", "moisture_warning", "linked_defects",
                         "audit_ref", "上游工序", "上游记录ID", "批次号", "登记编号",
-                        "序号"]
+                        "序号", "翻堆时段", "缺测核验单ID", "湿度缺测", "缺测状态",
+                        "湿度来源", "补测列表", "受理时间", "受理补测ID", "领料状态",
+                        "核验单ID"]
         for ef in extra_fields:
             if ef in values:
                 entry[ef] = values[ef]
@@ -83,6 +85,9 @@ class BaseModuleService:
         entry["abnormal"] = False
         entry["frozen"] = False
         rows.append(entry)
+
+        # 登记后的业务钩子（如发酵缺测自动开立缺测核验单）
+        self.after_create(entry, values)
 
         store.log_event(self.MODULE, entry["id"], "create", {"module": self.MODULE})
         return entry, []
@@ -151,6 +156,10 @@ class BaseModuleService:
     def validate_entry(self, values: dict[str, Any]) -> list[str]:
         """登记时自定义校验，返回错误信息列表。"""
         return []
+
+    def after_create(self, entry: dict[str, Any], values: dict[str, Any]) -> None:
+        """登记成功后的业务钩子（如自动开立关联单据）。"""
+        return None
 
     def on_confirm(self, entry: dict[str, Any], action: str) -> tuple[bool, str | None]:
         """确认操作前置处理，返回 (通过, 拒绝原因)。"""

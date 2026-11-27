@@ -9,6 +9,7 @@ from app.services.fixing import FixingService
 from app.services.rolling import RollingService
 from app.services.fermentation import FermentationService
 from app.services.drying import DryingService
+from app.services.gap_check import GapCheckService
 from app.services.grading import GradingService
 from app.services.blending import BlendingService
 from app.services.packing import PackingService
@@ -29,6 +30,7 @@ SERVICES: dict[str, BaseModuleService] = {
     "rolling": RollingService(),
     "fermentation": FermentationService(),
     "drying": DryingService(),
+    "gap_check": GapCheckService(),
     "grading": GradingService(),
     "blending": BlendingService(),
     "packing": PackingService(),

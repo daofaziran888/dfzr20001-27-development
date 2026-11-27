@@ -5,7 +5,7 @@ export type EntryRow = {
   status: string
   pending: boolean
   abnormal: boolean
-  [field: string]: string | number | boolean
+  [field: string]: any
 }
 
 export type ModuleMeta = {
@@ -18,6 +18,8 @@ export type ModuleMeta = {
   actions: string[]
   actionTargets: Record<string, string>
   metrics: string[]
+  /** 登记表单中真正必填的字段；缺省视为全部必填 */
+  requiredFields?: string[]
 }
 
 export type PageResult = {
